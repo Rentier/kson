@@ -20,6 +20,8 @@ public class KsonNumberTest {
 		parser = null;
 	}
 	
+	// Integer
+	
 	@Test
 	public void parseOneDigitIntegers() {
 		for(int i = 0; i < 10; i++) {
@@ -51,5 +53,51 @@ public class KsonNumberTest {
 			assertEquals(num, parser.parse("-" + i));	
 		}
 	}
+	
+	// Floating Point
+	
+	@Test
+	public void parseFloatLeadingZero() {
+		KsonNumber num = new KsonNumber(0.42);
+		assertEquals(num, parser.parse("0.42"));	
+	}
+	
+	@Test
+	public void parseNegativeFloatLeadingZero() {
+		KsonNumber num = new KsonNumber(-0.42);
+		assertEquals(num, parser.parse("-0.42"));	
+	}
+	
+	@Test
+	public void parseLongerFloat() {
+		KsonNumber num = new KsonNumber(1965627217.796594004);
+		assertEquals(num, parser.parse("1965627217.796594004"));	
+	}
+	
+	@Test
+	public void parseLongerNegativeFloat() {
+		KsonNumber num = new KsonNumber(-23407890238472934.78902384729342340126);
+		assertEquals(num, parser.parse("-23407890238472934.78902384729342340126"));	
+	}
+	
+	@Test
+	public void parseLongerFloatSmallE() {
+		KsonNumber num = new KsonNumber(42E8);
+		assertEquals(num, parser.parse("42E+8"));		
+	}
+	
+	@Test
+	public void parseLongerFloatBigE() {
+		KsonNumber num = new KsonNumber(42.1337e8);
+		assertEquals(num, parser.parse("42.1337e+8"));			
+	}
+	
+	@Test
+	public void parseLongerFloatSmallNegE() {
+		KsonNumber num = new KsonNumber(42.1337e-2);
+		assertEquals(num, parser.parse("42.1337e-2"));			
+	}
+
+	
 
 }

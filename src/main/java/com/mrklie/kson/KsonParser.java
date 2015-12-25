@@ -17,13 +17,13 @@ public class KsonParser {
 	}
 	
 	private Kson parseValue() {
-		if (expect('\"')) {
+		if (nextCharIs('\"')) {
 			return parseString();
-		} else if(expectOneOf("-01234567890")) {
+		} else if(nextCharIsOneOf("-01234567890")) {
 			return parseNumber();
-		} else if (expect('{')) {
+		} else if (nextCharIs('{')) {
 			return parseObject();
-		} else if (expect('[')) {
+		} else if (nextCharIs('[')) {
 			return parseArray();
 		} else  {
 			throw new KsonException("Not a value", count);
@@ -32,11 +32,11 @@ public class KsonParser {
 	
 	private KsonString parseString() {
 		StringBuffer sb = new StringBuffer();
-		accept('\"');
-		while(! expect('\"')) {
+		acceptOrError('\"');
+		while(! nextCharIs('\"')) {
 			sb.append(consume());
 		}
-		accept('\"');
+		acceptOrError('\"');
 		return new KsonString(sb.toString());
 	}	
 
@@ -44,13 +44,48 @@ public class KsonParser {
 		int sign = 1;
 		StringBuffer sb = new StringBuffer();
 		
-		if(expect('-')) {
+		if(nextCharIs('-')) {
 			consume();
 			sign = -1;
 		}
 		
-		while(expectOneOf("1234567890")) {
+		if(nextCharIs('0')) {
+			consume();
+			sb.append('0');
+		} else {
+			if(nextCharIsOneOf("123456789")) {
+				sb.append(consume());
+			} else {
+				throw new KsonException("Invalid number", count);
+			}
+			
+			while(nextCharIsOneOf("1234567890")) {
+				sb.append(consume());
+			}
+		}
+		
+		if(nextCharIs('.')) {
 			sb.append(consume());
+			while(nextCharIsOneOf("1234567890")) {
+				sb.append(consume());
+			}
+		}
+		
+		if(nextCharIsOneOf("eE") ) {
+			sb.append(consume());
+			if(nextCharIsOneOf("+-")) {
+				sb.append(consume()); 
+				if( nextCharIsOneOf("1234567890")) {
+					sb.append(consume());
+					while(nextCharIsOneOf("1234567890")) {
+						sb.append(consume());
+					}					
+				} else {
+					error("Exponent lacks digits");
+				}
+			} else {
+				error("Exponent lacks sign");
+			}
 		}
 		
 		double number = Double.parseDouble(sb.toString());
@@ -58,32 +93,37 @@ public class KsonParser {
 	}
 
 	private KsonObject parseObject() {
-		accept('{');
+		acceptOrError('{');
 		KsonObject obj = new KsonObject();
-
-		// If there is at least one entry in the object
-		boolean hasMore = expect('\"');
-			
-		while(hasMore) {
-			KsonString key = parseString();
-			accept(':');
-			Kson value = parseValue();
-			obj.add(key, value);
-
-			if(expect(',')) {
-				accept(',');
-			} else {
-				hasMore = false;
-			}
-		}
 		
-		accept('}');
+		if(nextCharIs('}')) {
+			acceptOrError('}');
+		} else {
+			do {
+				KsonString key = parseString();
+				acceptOrError(':');
+				Kson value = parseValue();
+				obj.add(key, value);
+			} while(acceptIf(','));		
+			acceptOrError('}');
+		}
 		
 		return obj;
 	}
 	
 	private KsonArray parseArray() {
+		acceptOrError('[');
 		KsonArray array = new KsonArray();
+		
+		if(nextCharIs(']')) {
+			acceptOrError(']');
+		} else {
+			do {
+				Kson val = parseValue();
+				array.add(val);
+			} while(acceptIf(','));
+		}
+		
 		return array;
 	}
 	
@@ -94,13 +134,13 @@ public class KsonParser {
 		return s.charAt(count);
 	}
 	
-	private boolean expect(char c) {
+	private boolean nextCharIs(char c) {
 		if(count >= s.length()) return false;
 		skipWhitespace();
 		return s.charAt(count) == c;
 	}
 	
-	private boolean expectOneOf(String str) {
+	private boolean nextCharIsOneOf(String str) {
 		skipWhitespace();
 		if(! hasMore()) return false;
 		
@@ -113,15 +153,27 @@ public class KsonParser {
 		return false;
 	}
 	
-	private boolean accept(char c) {
+	private void acceptOrError(char c) {
 		skipWhitespace();
-		return s.charAt(count++) == c;
+		if(s.charAt(count) == c ) {
+			count++;
+		} else {
+			throw new KsonException("Expected " + c + " , got " + peek(), count);
+		}
+	}
+	
+	private boolean acceptIf(char c) {
+		if(c == peek()) {
+			count++;
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
 	private char consume() {
 		skipWhitespace();
 		return s.charAt(count++);
-
 	}
 	
 	private void skipWhitespace() {
@@ -138,6 +190,10 @@ public class KsonParser {
 		if(!hasMore()) {
 			throw new KsonException("Reached EOL");
 		}
+	}
+	
+	private void error(String s) {
+		throw new KsonException(s, count);
 	}
 
 }

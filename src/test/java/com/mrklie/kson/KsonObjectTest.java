@@ -21,19 +21,19 @@ public class KsonObjectTest {
 	}
 	
 	@Test
-	public void testParseEmptyObject() {
+	public void parseEmptyObject() {
 		assertEquals(KsonObject.empty(), parser.parse("{}"));
 	}
 	
 	@Test
-	public void testParseObjectWithOneStringKey() {
+	public void parseObjectWithOneStringKey() {
 		KsonObject obj = KsonObject.empty();
 		obj.add(new KsonString("foo"), new KsonString("bar"));
 		assertEquals(obj, parser.parse("{\"foo\":\"bar\"}"));
 	}
 	
 	@Test
-	public void testParseObjectWithTwoStringKeys() {
+	public void parseObjectWithTwoStringKeys() {
 		KsonObject obj = KsonObject.empty();
 		obj.add(new KsonString("foo"), new KsonString("bar"));
 		obj.add(new KsonString("bar"), new KsonString("baz"));
@@ -41,7 +41,7 @@ public class KsonObjectTest {
 	}
 	
 	@Test
-	public void testParseObjectWithOneStringKeyAndWhitespace() {
+	public void parseObjectWithOneStringKeyAndWhitespace() {
 		KsonObject obj = KsonObject.empty();
 		obj.add(new KsonString("foo"), new KsonString("bar"));
 		assertEquals(obj, parser.parse("{   \"foo\"  : \"bar\" }"));
