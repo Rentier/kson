@@ -13,19 +13,29 @@ public class KsonParser {
 			throw new KsonException("Empty String", count);
 		}
 		
-		return parseValue();
+		Kson result = parseValue();
+		
+		if(count != s.length()) {
+			throw new KsonException("Reached last symbol, but not end of input");
+		}
+		
+		return result;
 	}
 	
 	private Kson parseValue() {
 		if (nextCharIs('\"')) {
 			return parseString();
-		} else if(nextCharIsOneOf("-01234567890")) {
+		} else if (nextCharIsOneOf("-01234567890")) {
 			return parseNumber();
 		} else if (nextCharIs('{')) {
 			return parseObject();
 		} else if (nextCharIs('[')) {
 			return parseArray();
-		} else  {
+		} else if (nextCharIsOneOf("tf")) {
+			return parseBoolean();
+		} else if(nextCharIs('n')) {
+			return parseNull();
+		} else {
 			throw new KsonException("Not a value", count);
 		}		
 	}
@@ -122,9 +132,28 @@ public class KsonParser {
 				Kson val = parseValue();
 				array.add(val);
 			} while(acceptIf(','));
+			acceptOrError(']');
 		}
 		
 		return array;
+	}
+	
+	public KsonBoolean parseBoolean() {		
+		if(acceptIf('t') && acceptIf('r') && acceptIf('u') && acceptIf('e')) {
+			return new KsonBoolean(true);
+		} else if(acceptIf('f') && acceptIf('a') && acceptIf('l') && acceptIf('s') && acceptIf('e')) {
+			return new KsonBoolean(false);
+		} else {
+			throw new KsonException("Invalid boolean literal", count);
+		}
+	}
+	
+	private KsonNull parseNull() {
+		if(acceptIf('n') && acceptIf('u') && acceptIf('l') && acceptIf('l')) {
+			return KsonNull.NULL;
+		} else {
+			throw new KsonException("Invalid null literal", count);
+		}
 	}
 	
 	// Parse helpers
@@ -140,13 +169,9 @@ public class KsonParser {
 		return s.charAt(count) == c;
 	}
 	
-	private boolean nextCharIsOneOf(String str) {
-		skipWhitespace();
-		if(! hasMore()) return false;
-		
-		char current = peek();
+	private boolean nextCharIsOneOf(String str) {		
 		for (int i = 0; i < str.length(); i++) {
-			if (current == str.charAt(i)) {
+			if (nextCharIs(str.charAt(i))) {
 				return true;
 			}
 		}
@@ -154,8 +179,7 @@ public class KsonParser {
 	}
 	
 	private void acceptOrError(char c) {
-		skipWhitespace();
-		if(s.charAt(count) == c ) {
+		if(nextCharIs(c)) {
 			count++;
 		} else {
 			throw new KsonException("Expected " + c + " , got " + peek(), count);
@@ -163,7 +187,7 @@ public class KsonParser {
 	}
 	
 	private boolean acceptIf(char c) {
-		if(c == peek()) {
+		if(nextCharIs(c)) {
 			count++;
 			return true;
 		} else {
